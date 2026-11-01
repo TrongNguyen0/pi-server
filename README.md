@@ -153,6 +153,31 @@ và bỏ `--root-path` trong `Dockerfile`.
 - `./pi up` từ chối dự án có `ports:` (port Docker publish sẽ vượt qua tường lửa).
 - Portainer/Dozzle có quyền với `docker.sock` (≈ root) nên chỉ bind `127.0.0.1` và chỉ mở qua Tailscale.
 
+## ⚠️ Lưu ý
+
+### Repo này là public
+
+Ai cũng đọc được mọi thứ trong repo và **cả lịch sử commit**.
+
+- **Không bao giờ commit** token, mật khẩu, private key, file `.env`. Bí mật chỉ để trong `.env`
+  (đã có trong `.gitignore`), ví dụ `TUNNEL_TOKEN`.
+- Trước khi commit, xem lại mình sắp đẩy gì lên: `git status` và `git diff --cached`.
+- Lỡ đẩy bí mật lên: **đổi/thu hồi ngay** (tạo lại token Cloudflare Tunnel, đổi mật khẩu…). Xóa file rồi commit
+  lại là **không đủ**, vì bí mật vẫn nằm trong lịch sử git.
+- Không ghi IP, tên máy Tailscale, mật khẩu Samba hay dữ liệu cá nhân vào README, issue, commit message.
+- Dự án trong `projects/` không bị đẩy lên repo này. Nếu dự án là repo public riêng thì áp dụng đúng các quy tắc trên.
+- Public không làm Pi kém an toàn hơn: bảo mật dựa vào SSH key, mật khẩu, Tailscale, tường lửa, không dựa vào
+  việc giấu cấu hình.
+
+### Khi cài đặt
+
+- `bootstrap.sh` **xóa sạch** ổ đĩa truyền vào. Chỉ gõ `YES` khi `lsblk` hiện đúng SSD (~238G). Script tự từ chối
+  thẻ SD đang chạy hệ điều hành.
+- Phải có SSH key trên Pi trước khi chạy (script kiểm tra), vì sau đó đăng nhập bằng mật khẩu bị tắt.
+- Phiên SSH đang mở qua hotspot không bị ngắt khi bật tường lửa (SSH từ mạng nội bộ vẫn được phép).
+- Tạo admin Portainer trong vòng 5 phút sau `./pi core`.
+- `bootstrap.sh` chưa được chạy trên Pi thật lần nào: bước nào lỗi thì lưu lại nguyên log để sửa.
+
 ## Giới hạn cần biết
 
 - **Quick tunnel:** URL đổi mỗi lần khởi động lại; Cloudflare giới hạn ~200 request đồng thời, không hỗ trợ SSE. Đủ cho demo, không cho sản phẩm thật.

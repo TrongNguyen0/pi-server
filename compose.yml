@@ -1,0 +1,65 @@
+# Core services. Start with ./pi core (it picks the tunnel profile from .env).
+# Public traffic: Internet -> Cloudflare -> cloudflared (outbound tunnel) -> caddy -> projects.
+# Admin UIs (Portainer, Dozzle) bind to 127.0.0.1 only; bootstrap.sh exposes them on Tailscale.
+name: core
+
+x-hardened: &hardened
+  restart: unless-stopped
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+services:
+  caddy:
+    <<: *hardened
+    image: caddy:2.11-alpine
+    cap_add: [NET_BIND_SERVICE]  # the caddy binary carries this file capability; exec fails without it
+    networks: [edge]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./projects:/etc/caddy/projects:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # No domain: random https://*.trycloudflare.com URL that changes on every restart (./pi url).
+  tunnel-quick:
+    <<: *hardened
+    image: cloudflare/cloudflared:2026.10.7
+    profiles: [quick]
+    networks: [edge]
+    command: tunnel --no-autoupdate --url http://caddy:8080
+
+  # With a domain: TUNNEL_TOKEN in .env; in the Cloudflare dashboard route your hostname to http://caddy:8080.
+  tunnel-named:
+    <<: *hardened
+    image: cloudflare/cloudflared:2026.10.7
+    profiles: [named]
+    networks: [edge]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+
+  # docker.sock = root on the host. Never route these through the tunnel.
+  portainer:
+    restart: unless-stopped
+    image: portainer/portainer-ce:2.45.3
+    command: --http-enabled
+    ports: ["127.0.0.1:9000:9000"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+  dozzle:
+    restart: unless-stopped
+    image: amir20/dozzle:v11.4
+    ports: ["127.0.0.1:8081:8080"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+networks:
+  edge:
+    name: edge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  portainer_data:

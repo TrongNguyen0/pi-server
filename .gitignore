@@ -1,0 +1,5 @@
+.env
+# Each project lives in projects/<name>, usually its own git repo.
+projects/*
+!projects/.gitkeep
+__pycache__/

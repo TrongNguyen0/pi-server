@@ -1,0 +1,23 @@
+{
+	servers {
+		# Requests arrive from cloudflared; the real visitor IP is in Cf-Connecting-Ip.
+		trusted_proxies static private_ranges
+		client_ip_headers Cf-Connecting-Ip
+	}
+}
+
+# TLS ends at Cloudflare, so Caddy only speaks plain HTTP inside the edge network.
+:8080 {
+	# One JSON line per request for every project (method, uri, status, bytes in/out, duration, client_ip).
+	# Authorization and Cookie headers are redacted by Caddy.
+	log {
+		output stdout
+		format json
+	}
+
+	import /etc/caddy/projects/*/Caddyfile
+
+	handle {
+		respond "pi-server: no such project" 404
+	}
+}

@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# pi-server CLI. Run ./pi with no arguments for help.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+usage: ./pi <command> [name]
+  core          start/refresh core (Caddy, tunnel, Portainer, Dozzle)
+  url           print the public URL (quick tunnel mode)
+  new <name>    create projects/<name> from template/
+  up <name>     build + start a project and register it with Caddy
+  down <name>   stop a project
+  logs [name]   follow a project's logs, or core's
+  ls            list running containers
+EOF
+	exit 1
+}
+
+# The name ends up in paths, sed and Caddy config, so keep it strict.
+check_name() {
+	[[ ${1:-} =~ ^[a-z][a-z0-9-]{0,30}$ ]] || die "project name: lowercase letters, digits, '-' (max 31)"
+}
+
+project() {
+	check_name "${1:-}"
+	[[ -f projects/$1/compose.yml ]] || die "no projects/$1/compose.yml (create it: ./pi new $1)"
+}
+
+tunnel_mode() {
+	if [[ -f .env ]] && grep -q '^TUNNEL_TOKEN=.' .env; then echo named; else echo quick; fi
+}
+
+case "${1:-}" in
+core)
+	mode=$(tunnel_mode)
+	other=$([[ $mode == named ]] && echo quick || echo named)
+	docker compose --profile "$mode" up -d
+	docker compose --profile "$other" rm -sf "tunnel-$other" >/dev/null
+	echo "core up, tunnel mode: $mode"
+	;;
+url)
+	docker compose logs tunnel-quick 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -n 1 \
+		|| die "no quick-tunnel URL yet (wait a few seconds; in named mode use your own domain)"
+	;;
+new)
+	check_name "${2:-}"
+	[[ -e projects/$2 ]] && die "projects/$2 already exists"
+	cp -r template "projects/$2"
+	grep -rl __NAME__ "projects/$2" | xargs sed -i "s/__NAME__/$2/g"
+	echo "created projects/$2 -> edit it, then: ./pi up $2"
+	;;
+up)
+	project "${2:-}"
+	grep -qE '^[[:space:]]*ports:' "projects/$2/compose.yml" \
+		&& die "projects/$2/compose.yml publishes ports; remove 'ports:' (public traffic goes through the tunnel)"
+	docker compose -f "projects/$2/compose.yml" up -d --build
+	docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+	echo "up: <public-url>/$2/   (./pi url)"
+	;;
+down)
+	project "${2:-}"
+	docker compose -f "projects/$2/compose.yml" down
+	;;
+logs)
+	if [[ -n ${2:-} ]]; then
+		project "$2"
+		docker compose -f "projects/$2/compose.yml" logs -f
+	else
+		docker compose logs -f
+	fi
+	;;
+ls) docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' ;;
+*) usage ;;
+esac

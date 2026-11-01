@@ -1,0 +1,4 @@
+redir /__NAME__ /__NAME__/
+handle_path /__NAME__/* {
+	reverse_proxy __NAME__:8000
+}

@@ -1,0 +1,19 @@
+services:
+  __NAME__:
+    build: .
+    restart: unless-stopped
+    environment:
+      LOG_BODY: "1"          # "0" to stop logging request/response bodies
+      LOG_BODY_MAX: "2048"   # bytes kept per body
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    # Only the web service joins edge; a database etc. stays on this project's default network.
+    networks: [edge]
+    # No `ports:` here: Docker-published ports bypass the firewall. ./pi up refuses them.
+
+networks:
+  edge:
+    external: true

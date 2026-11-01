@@ -53,16 +53,23 @@ Rút SSD ra Pi vẫn boot; Docker sẽ không chạy cho tới khi cắm lại (
 
 ## Cài đặt lần đầu
 
-**Chuẩn bị:** Raspberry Pi Imager → *Raspberry Pi OS Lite (64-bit)* ghi vào thẻ SD. Trong phần tùy chỉnh: đặt user,
-Wi-Fi (hotspot điện thoại), bật SSH.
+**Chuẩn bị:**
+1. Trên PC tạo SSH key nếu chưa có: `ssh-keygen -t ed25519` (Enter hết).
+2. Raspberry Pi Imager → *Raspberry Pi OS Lite (64-bit)* ghi vào thẻ SD. Phần tùy chỉnh: đặt user, Wi-Fi (hotspot
+   điện thoại), tab *Services* → bật SSH → *Allow public-key authentication only* → dán nội dung
+   `C:\Users\<bạn>\.ssh\id_ed25519.pub`. (Script sẽ tắt đăng nhập bằng mật khẩu, thiếu key là bị khóa ngoài.)
+3. Cắm SSD vào cổng USB 3 (xanh), cắm thẻ SD, bật Pi. IP của Pi xem trong danh sách thiết bị của hotspot.
 
 ```bash
-# 1. Trên PC: copy SSH key lên Pi (bắt buộc, vì script sẽ tắt đăng nhập bằng mật khẩu)
-ssh-copy-id <user>@<ip-cua-pi>
+# 1. Trên PC
+ssh <user>@<ip-cua-pi>
 
-# 2. Trên Pi: lấy repo và chạy cài đặt. /dev/sda là SSD USB — SẼ BỊ XÓA SẠCH (script hỏi lại YES)
+# 2. Trên Pi: lấy repo (repo private → đăng nhập GitHub) và chạy cài đặt.
+#    /dev/sda là SSD USB — SẼ BỊ XÓA SẠCH (script hỏi lại YES)
+sudo apt update && sudo apt install -y git gh
+gh auth login                           # GitHub.com → HTTPS → Login with a web browser (nhập mã trên PC)
 lsblk                                   # xem SSD tên gì
-git clone https://github.com/TrongNguyen0/pi-server.git ~/pi-server
+gh repo clone TrongNguyen0/pi-server ~/pi-server
 sudo bash ~/pi-server/bootstrap.sh /dev/sda
 #    giữa chừng: nhập mật khẩu Samba, mở link đăng nhập Tailscale
 

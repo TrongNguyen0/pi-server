@@ -64,12 +64,10 @@ Rút SSD ra Pi vẫn boot; Docker sẽ không chạy cho tới khi cắm lại (
 # 1. Trên PC
 ssh <user>@<ip-cua-pi>
 
-# 2. Trên Pi: lấy repo (repo private → đăng nhập GitHub) và chạy cài đặt.
-#    /dev/sda là SSD USB — SẼ BỊ XÓA SẠCH (script hỏi lại YES)
-sudo apt update && sudo apt install -y git gh
-gh auth login                           # GitHub.com → HTTPS → Login with a web browser (nhập mã trên PC)
+# 2. Trên Pi: lấy repo và chạy cài đặt. /dev/sda là SSD USB — SẼ BỊ XÓA SẠCH (script hỏi lại YES)
+sudo apt update && sudo apt install -y git
 lsblk                                   # xem SSD tên gì
-gh repo clone TrongNguyen0/pi-server ~/pi-server
+git clone https://github.com/TrongNguyen0/pi-server.git ~/pi-server
 sudo bash ~/pi-server/bootstrap.sh /dev/sda
 #    giữa chừng: nhập mật khẩu Samba, mở link đăng nhập Tailscale
 
